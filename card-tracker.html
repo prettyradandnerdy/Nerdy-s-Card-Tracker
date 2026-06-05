@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CardTrackr — Trading Card Checklist Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --bg2: #141417;
+    --bg3: #1c1c21;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --accent: #c8f060;
+    --accent2: #7f5af0;
+    --text: #f0f0f0;
+    --muted: #6b6b7a;
+    --muted2: #9898a8;
+    --card-h: 52px;
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* NOISE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+  }
+
+  /* HEADER */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(13,13,15,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex; align-items: center; gap: 1rem;
+    height: 60px;
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 1.2rem;
+    color: var(--text); text-decoration: none;
+    display: flex; align-items: center; gap: 8px;
+    letter-spacing: -0.02em;
+  }
+  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .nav-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 99px;
+    padding: 4px 12px;
+  }
+
+  /* HERO */
+  .hero {
+    position: relative;
+    padding: 5rem 2rem 3rem;
+    max-width: 860px; margin: 0 auto;
+    text-align: center;
+    z-index: 1;
+  }
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 1.25rem;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .hero-eyebrow::before, .hero-eyebrow::after {
+    content: ''; display: block; width: 24px; height: 1px; background: var(--accent); opacity: 0.5;
+  }
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    font-weight: 800; line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.2rem;
+  }
+  .hero h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+  .hero p {
+    color: var(--muted2);
+    font-size: 1rem; line-height: 1.7;
+    max-width: 520px; margin: 0 auto 2.5rem;
+  }
+
+  /* MAIN CARD */
+  .main-card {
+    max-width: 860px; margin: 0 auto;
+    padding: 0 1.5rem 4rem;
+    position: relative; z-index: 1;
+  }
+
+  /* URL INPUT */
+  .url-section {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .url-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 10px; display: block;
+  }
+  .url-row { display: flex; gap: 10px; }
+  .url-input {
+    flex: 1; background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .url-input::placeholder { color: var(--muted); }
+  .url-input:focus { border-color: var(--accent2); }
+  .btn {
+    padding: 12px 22px; border-radius: var(--radius);
+    font-family: 'Syne', sans-serif; font-weight: 600; font-size: 14px;
+    cursor: pointer; border: none; transition: all 0.18s;
+    display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  }
+  .btn-accent { background: var(--accent); color: #0d0d0f; }
+  .btn-accent:hover { background: #d4f570; transform: translateY(-1px); }
+  .btn-accent:active { transform: scale(0.97); }
+  .btn-ghost {
+    background: transparent; color: var(--muted2);
+    border: 1px solid var(--border2);
+  }
+  .btn-ghost:hover { border-color: var(--border2); background: var(--bg3); color: var(--text); }
+
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    color: var(--muted); font-size: 12px; margin: 1rem 0;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  .paste-section {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  textarea.paste-input {
+    width: 100%; min-height: 120px; resize: vertical;
+    background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: var(--radius); padding: 12px 16px;
+    color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px;
+    line-height: 1.6; outline: none;
+  }
+  textarea.paste-input::placeholder { color: var(--muted); }
+  textarea.paste-input:focus { border-color: var(--accent2); }
+  .paste-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+  /* STATUS */
+  .status-bar {
+    display: none; align-items: center; gap: 10px;
+    padding: 12px 16px; border-radius: var(--radius);
+    border: 1px solid var(--border2); background: var(--bg3);
+    font-size: 13px; color: var(--muted2);
+    margin-bottom: 1.25rem;
+  }
+  .status-bar.visible { display: flex; }
+  .spinner {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    animation: spin 0.65s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .status-dot.ok { background: var(--accent); }
+  .status-dot.err { background: #f25c5c; }
+
+  /* CHECKLIST */
+  #checklist-area { display: none; }
+  #checklist-area.visible { display: block; }
+
+  .cl-header {
+    display: flex; align-items: flex-start; gap: 1rem;
+    flex-wrap: wrap; margin-bottom: 1.25rem;
+  }
+  .cl-title-block { flex: 1; }
+  .cl-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+  .cl-meta { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  .stat {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+  }
+  .stat-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; font-family: 'DM Mono', monospace; }
+  .stat-val { font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 700; }
+  .stat-val.accent { color: var(--accent); }
+
+  .progress-wrap { margin-bottom: 1.25rem; }
+  .progress-bg {
+    height: 5px; background: var(--bg3); border-radius: 99px; overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .progress-fg {
+    height: 100%; background: var(--accent); border-radius: 99px;
+    transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+  }
+  .progress-label { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+  .filters {
+    display: flex; gap: 8px; margin-bottom: 1.25rem; flex-wrap: wrap;
+  }
+  .search {
+    flex: 1; min-width: 160px;
+    background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: var(--radius); padding: 9px 14px;
+    color: var(--text); font-size: 13px; outline: none;
+  }
+  .search:focus { border-color: var(--accent2); }
+  .filter-btn {
+    padding: 8px 14px; border-radius: 99px; font-size: 12px; cursor: pointer;
+    border: 1px solid var(--border); background: transparent; color: var(--muted2);
+    transition: all 0.15s; font-family: 'DM Mono', monospace;
+  }
+  .filter-btn.active { background: var(--accent); color: #0d0d0f; border-color: var(--accent); font-weight: 500; }
+  .filter-btn:hover:not(.active) { border-color: var(--border2); color: var(--text); }
+
+  /* SET GROUPS */
+  .set-group {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 10px;
+    transition: border-color 0.2s;
+  }
+  .set-group:hover { border-color: var(--border2); }
+  .set-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .set-header:hover { background: var(--bg3); }
+  .set-name {
+    font-family: 'Syne', sans-serif; font-weight: 600; font-size: 14px;
+    flex: 1; letter-spacing: -0.01em;
+  }
+  .set-progress-mini {
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+  }
+  .set-badge {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    padding: 3px 9px; border-radius: 99px;
+    background: rgba(200,240,96,0.1); color: var(--accent);
+    border: 1px solid rgba(200,240,96,0.2);
+  }
+  .chevron { font-size: 18px; color: var(--muted); transition: transform 0.2s; user-select: none; }
+  .chevron.open { transform: rotate(180deg); }
+
+  .card-list { border-top: 1px solid var(--border); }
+  .card-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 18px; cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+    position: relative;
+  }
+  .card-row:last-child { border-bottom: none; }
+  .card-row:hover { background: rgba(255,255,255,0.025); }
+  .card-row.owned { opacity: 0.45; }
+  .card-row.owned .card-name-text { text-decoration: line-through; }
+
+  .check {
+    width: 20px; height: 20px; border-radius: 5px;
+    border: 1.5px solid var(--border2); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; background: transparent;
+  }
+  .card-row.owned .check { background: var(--accent); border-color: var(--accent); }
+  .check-mark { display: none; font-size: 12px; font-weight: 700; color: #0d0d0f; }
+  .card-row.owned .check-mark { display: block; }
+
+  .card-name-text { font-size: 13px; flex: 1; }
+  .card-sub-text { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .card-num-text { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-left: auto; }
+
+  /* SAVE/LOAD */
+  .save-bar {
+    display: flex; gap: 8px; margin-top: 1.5rem; flex-wrap: wrap;
+    padding: 14px 18px;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    align-items: center;
+  }
+  .save-bar-label { font-size: 12px; color: var(--muted); flex: 1; font-family: 'DM Mono', monospace; }
+
+  /* FOOTER */
+  footer {
+    text-align: center; padding: 3rem 2rem;
+    color: var(--muted); font-size: 12px;
+    border-top: 1px solid var(--border);
+    position: relative; z-index: 1;
+    font-family: 'DM Mono', monospace;
+  }
+  footer a { color: var(--accent2); text-decoration: none; }
+
+  /* GLOW BLOBS */
+  .blob {
+    position: fixed; border-radius: 50%;
+    filter: blur(100px); opacity: 0.06; pointer-events: none; z-index: 0;
+  }
+  .blob1 { width: 500px; height: 500px; background: var(--accent2); top: -100px; left: -100px; }
+  .blob2 { width: 400px; height: 400px; background: var(--accent); bottom: -80px; right: -80px; }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; padding: 3rem; color: var(--muted); }
+  .empty-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+
+  @media (max-width: 600px) {
+    .url-row { flex-direction: column; }
+    .stats-row { grid-template-columns: repeat(3,1fr); }
+    header { padding: 0 1rem; }
+    .hero { padding: 3rem 1rem 2rem; }
+    .main-card { padding: 0 1rem 3rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+
+<header>
+  <a class="logo" href="#"><span class="logo-dot"></span> CardTrackr</a>
+  <div class="header-right">
+    <span class="nav-tag">v1.0</span>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-eyebrow">Trading Card Checklist Tracker</div>
+  <h1>Track every card<br>you <em>actually</em> own.</h1>
+  <p>Paste a checklist URL from any trading card site, or drop in a raw list. We'll parse it and turn it into a clean interactive tracker — instantly.</p>
+</section>
+
+<main class="main-card">
+
+  <!-- URL INPUT -->
+  <div class="url-section">
+    <label class="url-label">&#9632; Load from URL</label>
+    <div class="url-row">
+      <input class="url-input" id="url-input" type="text" placeholder="https://www.tradercracks.com/2023-topps-chrome-disney-100-trading-cards" />
+      <button class="btn btn-accent" onclick="fetchFromUrl()">&#9654; Fetch</button>
+    </div>
+  </div>
+
+  <div class="divider">or paste a list</div>
+
+  <!-- PASTE INPUT -->
+  <div class="paste-section">
+    <label class="url-label">&#9632; Paste raw checklist</label>
+    <textarea class="paste-input" id="paste-input" placeholder="1 Mickey Mouse – Mickey and Friends&#10;2 Moana – Moana&#10;3 Aurora – Sleeping Beauty&#10;...one card per line, any format"></textarea>
+    <div class="paste-actions">
+      <button class="btn btn-accent" onclick="parseFromPaste()">&#9654; Parse list</button>
+      <button class="btn btn-ghost" onclick="loadExample()">Load example</button>
+    </div>
+  </div>
+
+  <!-- STATUS -->
+  <div class="status-bar" id="status-bar">
+    <div class="spinner" id="status-spinner"></div>
+    <div class="status-dot" id="status-dot" style="display:none"></div>
+    <span id="status-msg">Fetching page…</span>
+  </div>
+
+  <!-- CHECKLIST -->
+  <div id="checklist-area">
+    <div class="cl-header">
+      <div class="cl-title-block">
+        <div class="cl-title" id="cl-title">My Collection</div>
+        <div class="cl-meta" id="cl-meta"></div>
+      </div>
+      <button class="btn btn-ghost" onclick="resetAll()" style="font-size:12px;padding:9px 14px;">&#8635; New list</button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat"><div class="stat-label">Total</div><div class="stat-val" id="st-total">0</div></div>
+      <div class="stat"><div class="stat-label">Owned</div><div class="stat-val accent" id="st-owned">0</div></div>
+      <div class="stat"><div class="stat-label">Need</div><div class="stat-val" id="st-need">0</div></div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-bg"><div class="progress-fg" id="prog-bar" style="width:0%"></div></div>
+      <div class="progress-label" id="prog-label">0% complete</div>
+    </div>
+
+    <div class="filters">
+      <input class="search" id="search" type="text" placeholder="Search cards…" oninput="renderSets()" />
+      <button class="filter-btn active" id="f-all" onclick="setFilter('all')">All</button>
+      <button class="filter-btn" id="f-need" onclick="setFilter('need')">Need</button>
+      <button class="filter-btn" id="f-owned" onclick="setFilter('owned')">Owned</button>
+    </div>
+
+    <div id="sets-container"></div>
+
+    <div class="save-bar">
+      <span class="save-bar-label">&#128190; Your progress is saved in this browser automatically.</span>
+      <button class="btn btn-ghost" onclick="exportProgress()" style="font-size:12px;padding:8px 14px;">Export JSON</button>
+      <button class="btn btn-ghost" onclick="importProgress()" style="font-size:12px;padding:8px 14px;">Import JSON</button>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Built with CardTrackr &mdash; paste any checklist, track your collection. &nbsp;|&nbsp; <a href="https://github.com/" target="_blank">Host this free on GitHub Pages</a>
+</footer>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────
+let cardData = null;
+let owned = {};
+let collapsed = {};
+let activeFilter = 'all';
+const STORAGE_KEY = 'cardtrackr_v1';
+
+// ── INIT ───────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed.cardData) {
+        cardData = parsed.cardData;
+        owned = parsed.owned || {};
+        collapsed = {};
+        showChecklist();
+      }
+    } catch(e) {}
+  }
+});
+
+// ── FETCH FROM URL ─────────────────────────────────────────────────────
+async function fetchFromUrl() {
+  const url = document.getElementById('url-input').value.trim();
+  if (!url) { alert('Please enter a URL first.'); return; }
+  showStatus('Fetching page…', 'loading');
+  try {
+    // Use allorigins to bypass CORS
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const resp = await fetch(proxy);
+    const data = await resp.json();
+    if (!data.contents) throw new Error('Empty response');
+    const text = data.contents;
+    await parseWithClaude(text, url);
+  } catch(err) {
+    showStatus('Could not fetch that URL. Try pasting the text instead.', 'error');
+  }
+}
+
+// ── PARSE WITH CLAUDE API ──────────────────────────────────────────────
+async function parseWithClaude(rawText, sourceHint) {
+  showStatus('Reading checklist with AI…', 'loading');
+  const prompt = `You are a trading card checklist parser. Extract ALL cards from the following webpage content and return ONLY valid JSON (no markdown, no preamble, no explanation).
+
+Format exactly:
+{
+  "title": "Set name e.g. 2023 Topps Chrome Disney 100",
+  "source": "source URL or site name",
+  "sections": [
+    {
+      "set": "Section/subset name",
+      "cards": [
+        { "name": "Card name", "number": "card number or prefix like IM-1", "sub": "subtitle/subtext like film or team name" }
+      ]
+    }
+  ]
+}
+
+Rules:
+- Group cards by their subset/insert set
+- Extract card numbers if present
+- Include character/player names as the card name
+- If there's a source film/team/set as subtitle, put it in "sub"
+- Capture ALL cards listed, including inserts, parallels lists are OK to skip (just list unique cards not parallel variants)
+- Title should be the full set name
+
+Source hint: ${sourceHint || 'unknown'}
+
+Webpage content:
+${rawText.substring(0, 14000)}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const result = await resp.json();
+    if (result.error) throw new Error(result.error.message);
+    const text = result.content.map(b => b.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    cardData = JSON.parse(clean);
+    owned = {};
+    collapsed = {};
+    saveProgress();
+    showChecklist();
+    showStatus(`Loaded ${cardData.sections.reduce((s,sec)=>s+sec.cards.length,0)} cards`, 'ok');
+  } catch(err) {
+    showStatus('AI parsing failed. Check your API key or try pasting the list manually.', 'error');
+  }
+}
+
+// ── PARSE FROM PASTE ───────────────────────────────────────────────────
+async function parseFromPaste() {
+  const raw = document.getElementById('paste-input').value.trim();
+  if (!raw) { alert('Please paste some card names first.'); return; }
+  await parseWithClaude(raw, 'user-pasted list');
+}
+
+// ── EXAMPLE ────────────────────────────────────────────────────────────
+function loadExample() {
+  document.getElementById('paste-input').value = `1 Mickey Mouse – Mickey and Friends
+2 Moana – Moana
+3 Aurora – Sleeping Beauty
+61 Buzz Lightyear – Toy Story
+83 Woody – Toy Story
+92 Elsa – Frozen
+IM-1 The Circle of Life – The Lion King
+IM-8 Anna Saves Elsa – Frozen
+SC-1 The Bare Necessities – The Jungle Book
+MF-1 Mickey Mouse /23
+PC-1 Mickey Mouse 1/1`;
+}
+
+// ── CHECKLIST DISPLAY ──────────────────────────────────────────────────
+function showChecklist() {
+  document.getElementById('checklist-area').classList.add('visible');
+  document.getElementById('cl-title').textContent = cardData.title || 'My Collection';
+  document.getElementById('cl-meta').textContent = cardData.source || '';
+  renderSets();
+  updateStats();
+}
+
+function setFilter(f) {
+  activeFilter = f;
+  ['all','need','owned'].forEach(x => document.getElementById('f-'+x).classList.toggle('active', x===f));
+  renderSets();
+}
+
+function updateStats() {
+  if (!cardData) return;
+  const total = cardData.sections.reduce((s,sec) => s + sec.cards.length, 0);
+  const ownedCount = Object.values(owned).filter(Boolean).length;
+  const pct = total ? Math.round(ownedCount / total * 100) : 0;
+  document.getElementById('st-total').textContent = total;
+  document.getElementById('st-owned').textContent = ownedCount;
+  document.getElementById('st-need').textContent = total - ownedCount;
+  document.getElementById('prog-bar').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = pct + '% complete';
+}
+
+function renderSets() {
+  if (!cardData) return;
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  const container = document.getElementById('sets-container');
+  container.innerHTML = '';
+
+  cardData.sections.forEach((sec, si) => {
+    const filtered = sec.cards.filter((card, ci) => {
+      const k = si + '-' + ci;
+      const mq = !q || card.name.toLowerCase().includes(q) || (card.number||'').toLowerCase().includes(q) || (card.sub||'').toLowerCase().includes(q);
+      const mo = activeFilter === 'all' || (activeFilter === 'owned' && owned[k]) || (activeFilter === 'need' && !owned[k]);
+      return mq && mo;
+    });
+    if (!filtered.length) return;
+
+    const ownedInSec = sec.cards.filter((_,ci) => owned[si+'-'+ci]).length;
+    const isOpen = !collapsed[si];
+
+    const group = document.createElement('div');
+    group.className = 'set-group';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'set-header';
+    hdr.innerHTML = `
+      <span class="set-name">${sec.set}</span>
+      <span class="set-progress-mini">${ownedInSec}/${sec.cards.length}</span>
+      <span class="set-badge">${sec.cards.length} cards</span>
+      <span class="chevron ${isOpen ? 'open' : ''}">&#8964;</span>
+    `;
+    hdr.onclick = () => { collapsed[si] = !collapsed[si]; renderSets(); };
+    group.appendChild(hdr);
+
+    if (isOpen) {
+      const list = document.createElement('div');
+      list.className = 'card-list';
+      filtered.forEach(card => {
+        const origIdx = sec.cards.indexOf(card);
+        const k = si + '-' + origIdx;
+        const isOwned = !!owned[k];
+        const row = document.createElement('div');
+        row.className = 'card-row' + (isOwned ? ' owned' : '');
+        row.innerHTML = `
+          <div class="check"><span class="check-mark">&#10003;</span></div>
+          <span class="card-name-text">${card.name}</span>
+          ${card.sub ? `<span class="card-sub-text">${card.sub}</span>` : ''}
+          ${card.number ? `<span class="card-num-text">${card.number}</span>` : ''}
+        `;
+        row.onclick = () => { owned[k] = !owned[k]; saveProgress(); updateStats(); renderSets(); };
+        list.appendChild(row);
+      });
+      group.appendChild(list);
+    }
+    container.appendChild(group);
+  });
+
+  if (container.children.length === 0) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">&#9900;</div><p>No cards match your filter.</p></div>';
+  }
+}
+
+// ── PERSISTENCE ────────────────────────────────────────────────────────
+function saveProgress() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ cardData, owned }));
+}
+
+function exportProgress() {
+  const blob = new Blob([JSON.stringify({ cardData, owned }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'cardtrackr-progress.json'; a.click();
+}
+
+function importProgress() {
+  const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.cardData) { cardData = data.cardData; owned = data.owned || {}; saveProgress(); showChecklist(); }
+        else alert('Invalid file format.');
+      } catch(err) { alert('Could not read file.'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function resetAll() {
+  if (!confirm('Start a new list? Your current progress will be cleared.')) return;
+  cardData = null; owned = {}; collapsed = {};
+  localStorage.removeItem(STORAGE_KEY);
+  document.getElementById('checklist-area').classList.remove('visible');
+  document.getElementById('url-input').value = '';
+  document.getElementById('paste-input').value = '';
+  hideStatus();
+}
+
+// ── STATUS ─────────────────────────────────────────────────────────────
+function showStatus(msg, type) {
+  const bar = document.getElementById('status-bar');
+  const spinner = document.getElementById('status-spinner');
+  const dot = document.getElementById('status-dot');
+  const msgEl = document.getElementById('status-msg');
+  bar.classList.add('visible');
+  msgEl.textContent = msg;
+  if (type === 'loading') { spinner.style.display = 'block'; dot.style.display = 'none'; }
+  else { spinner.style.display = 'none'; dot.style.display = 'block'; dot.className = 'status-dot ' + (type === 'ok' ? 'ok' : 'err'); }
+}
+function hideStatus() { document.getElementById('status-bar').classList.remove('visible'); }
+</script>
+</body>
+</html>
