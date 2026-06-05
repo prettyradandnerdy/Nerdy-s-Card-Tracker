@@ -481,6 +481,8 @@ async function fetchFromUrl() {
 }
 
 // ── PARSE WITH CLAUDE API ──────────────────────────────────────────────
+const GEMINI_API_KEY = 'AQ.Ab8RN6JlFJDwO7Bb3XrYW7oy-n7l4EZIt76gFgbeWoeBx7EcEw';
+
 async function parseWithClaude(rawText, sourceHint) {
   showStatus('Reading checklist with AI…', 'loading');
   const prompt = `You are a trading card checklist parser. Extract ALL cards from the following webpage content and return ONLY valid JSON (no markdown, no preamble, no explanation).
@@ -513,18 +515,16 @@ Webpage content:
 ${rawText.substring(0, 14000)}`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4000,
-        messages: [{ role: 'user', content: prompt }]
+        contents: [{ parts: [{ text: prompt }] }]
       })
     });
     const result = await resp.json();
     if (result.error) throw new Error(result.error.message);
-    const text = result.content.map(b => b.text || '').join('');
+    const text = result.candidates[0].content.parts[0].text;
     const clean = text.replace(/```json|```/g, '').trim();
     cardData = JSON.parse(clean);
     owned = {};
